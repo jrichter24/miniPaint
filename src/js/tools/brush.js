@@ -201,6 +201,99 @@ class Brush_class extends Base_tools_class {
 
 		var params_hash = this.get_params_hash();
 
+		// NEW: remember the layer we started on, to merge back into later
+		this._mergeTargetId = (config.layer && config.layer.id) ? config.layer.id : null;
+
+		if (config.layer.type != this.name || params_hash != this.params_hash) {
+			// register new object - current layer is not ours or params changed (UNCHANGED)
+			this.layer = {
+			type: this.name,
+			data: [[]],
+			params: this.clone(this.getParams()),
+			status: 'draft',
+			render_function: [this.name, 'render'],
+			x: 0,
+			y: 0,
+			width: config.WIDTH,
+			height: config.HEIGHT,
+			hide_selection_if_active: true,
+			rotate: null,
+			is_vector: true,
+			color: config.COLOR
+			};
+			app.State.do_action(
+			new app.Actions.Bundle_action('new_brush_layer', 'New Brush Layer', [
+				new app.Actions.Insert_layer_action(this.layer)
+			])
+			);
+			this.params_hash = params_hash;
+
+			// reset event links index (UNCHANGED)
+			this.data_index = 0;
+			index = 0;
+			this.event_links = [];
+			this.event_links.push({
+			identifier: event_identifier,
+			index: this.data_index,
+			});
+		}
+		else {
+			// OLD (created its own history entry):
+			// const new_data = JSON.parse(JSON.stringify(config.layer.data));
+			// new_data.push([]);
+			// app.State.do_action(
+			//   new app.Actions.Bundle_action('update_brush_layer', 'Update Brush Layer', [
+			//     new app.Actions.Update_layer_action(config.layer.id, { data: new_data })
+			//   ])
+			// );
+
+			// NEW: just mutate without creating a history step
+			const new_data = JSON.parse(JSON.stringify(config.layer.data));
+			new_data.push([]);
+			config.layer.data = new_data;
+			this.Base_layers.render();
+		}
+
+		// in case of undo, recalculate index (UNCHANGED)
+		for (var i = index; i >= 0; i++) {
+			if (typeof config.layer.data[index] != "undefined") break;
+			index--;
+		}
+
+		var current_group = config.layer.data[index];
+		var params = this.getParams();
+
+		// detect line size (UNCHANGED)
+		var size = params.size;
+		var new_size = size;
+
+		if (params.pressure == true) {
+			if (this.pressure_supported) {
+			new_size = size * this.pointer_pressure * 2;
+			}
+			else {
+			new_size = size + size / this.max_speed * mouse.speed_average * this.power;
+			new_size = Math.max(new_size, size / 4);
+			new_size = Math.round(new_size);
+			}
+		}
+
+		var mouse_coords = this.get_mouse_coordinates_from_event(e);
+		var mouse_x = mouse_coords.x;
+		var mouse_y = mouse_coords.y;
+
+		current_group.push([mouse_x - config.layer.x, mouse_y - config.layer.y, new_size]);
+		this.Base_layers.render();
+		}
+
+
+	mousedown_action_org(e, index, event_identifier) {
+		var mouse = this.get_mouse_info(e);
+		if (mouse.click_valid == false)
+			return;
+
+		var params_hash = this.get_params_hash();
+
 		if (config.layer.type != this.name || params_hash != this.params_hash) {
 			//register new object - current layer is not ours or params changed
 			this.layer = {
@@ -323,7 +416,7 @@ class Brush_class extends Base_tools_class {
 		this.Base_layers.render();
 	}
 
-	mouseup_action(e, index) {
+	mouseup_action_org(e, index) {
 		var mouse = this.get_mouse_info(e);
 		if (mouse.click_valid == false) {
 			config.layer.status = null;
@@ -335,6 +428,74 @@ class Brush_class extends Base_tools_class {
 		this.check_dimensions();
 		this.Base_layers.render();
 	}
+
+	mouseup_action(e, index) {
+		var mouse = this.get_mouse_info(e);
+		if (mouse.click_valid == false) {
+			config.layer.status = null;
+			return;
+		}
+
+		// close draft for the temp brush layer
+		config.layer.status = null;
+
+		// IMPORTANT: do NOT call this.check_dimensions() here (it creates its own history)
+		// this.check_dimensions();
+
+		this.Base_layers.render();
+
+		// === Auto-merge the temp brush layer into the layer we started on ===
+		try {
+			const strokeLayer = config.layer; // the temporary brush layer
+			if (!strokeLayer || strokeLayer.type !== this.name) return;
+
+			// 1) Rasterize the brush layer to a canvas
+			const strokeCanvas = this.Base_layers.convert_layer_to_canvas(strokeLayer.id, false, false);
+
+			// 2) Find merge target WITHOUT changing selection/history
+			const target = (this._mergeTargetId != null)
+			? this.Base_layers.get_layer(this._mergeTargetId)
+			: this.Base_layers.find_previous(strokeLayer.id);
+			if (!target || target.id === strokeLayer.id) return;
+
+			// 3) Build a canvas from the target (same pattern used by fill)
+			const baseCanvas = document.createElement('canvas');
+			const baseCtx = baseCanvas.getContext('2d');
+			if (target.type !== null) {
+			baseCanvas.width  = target.width_original;
+			baseCanvas.height = target.height_original;
+			baseCtx.drawImage(target.link, 0, 0);
+			} else {
+			baseCanvas.width  = config.WIDTH;
+			baseCanvas.height = config.HEIGHT;
+			}
+
+			// 4) Draw stroke over target with proper offsets
+			const dx = (strokeLayer.x || 0) - (target.x || 0);
+			const dy = (strokeLayer.y || 0) - (target.y || 0);
+			baseCtx.drawImage(strokeCanvas, dx, dy);
+
+			// 5) Silent-select target so Update_layer_image_action(canvas) updates it
+			const prevSelected = config.layer;
+			config.layer = target; // no Base_layers.select => no selection history step
+
+			// 6) Commit: update bitmap + delete temp layer; merge into creation step
+			app.State.do_action(
+			new app.Actions.Bundle_action('brush_merge_down', 'Brush Merge Down', [
+				new app.Actions.Update_layer_image_action(baseCanvas), // updates CURRENT selection (target)
+				new app.Actions.Delete_layer_action(strokeLayer.id)    // remove temp brush layer
+			]),
+			{ merge_with_history: ['new_brush_layer'] }
+			);
+
+			// keep selection on target
+			config.layer = target;
+			this.Base_layers.render();
+		} catch (err) {
+			console.warn('Brush auto-merge failed:', err);
+		}
+		}
+
 
 	render(ctx, layer) {
 		if (layer.data.length == 0)
