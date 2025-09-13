@@ -37,6 +37,14 @@ class Shape_class extends Base_tools_class {
 				return;
 
 			if (code == 72) {
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
 				//H
 				this.show_shapes();
 			}

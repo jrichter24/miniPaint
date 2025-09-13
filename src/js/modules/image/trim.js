@@ -32,6 +32,14 @@ class Image_trim_class {
 				return;
 
 			if (code == 84) {
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
 				//trim
 				this.trim();
 				event.preventDefault();

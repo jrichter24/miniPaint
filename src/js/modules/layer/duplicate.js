@@ -28,6 +28,15 @@ class Layer_duplicate_class {
 
 			if (code == 68) {
 				//D - duplicate
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
+				
 				this.duplicate();
 				event.preventDefault();
 			}

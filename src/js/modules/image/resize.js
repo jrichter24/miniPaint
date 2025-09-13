@@ -40,8 +40,17 @@ class Image_resize_class {
 			if (this.Helper.is_input(event.target))
 				return;
 
+
 			if (code == 82 && event.ctrlKey != true && event.metaKey != true) {
 				//R - resize
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
 				this.resize();
 				event.preventDefault();
 			}

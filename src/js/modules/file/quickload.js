@@ -24,6 +24,15 @@ class File_quickload_class {
 
 			if (code == 121) {
 				//F10
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
+				
 				_this.quickload();
 				event.preventDefault();
 			}

@@ -26,6 +26,16 @@ class Layer_new_class {
 				return;
 
 			if (code == 78 && event.ctrlKey != true && event.metaKey != true) {
+
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
+
 				//N
 				this.new();
 			}

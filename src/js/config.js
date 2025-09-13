@@ -31,6 +31,40 @@ config.guides = [];
 config.ruler_active = false;
 config.enable_autoresize_by_default = true;
 
+config.lock_image_loading_after_startup = false;
+
+config.IMAGE_URL_WHITELIST = [
+	'jonas-barney.com',
+    'jonas-barney.de'
+];
+
+/**
+ * Returns true if the given URL's hostname is on the whitelist
+ * (exact match or any subdomain).
+ * Safe for quoted/encoded/relative URLs.
+ */
+config.isImageHostAllowed = function (hostname) {
+
+	if (!config.IMAGE_URL_WHITELIST || config.IMAGE_URL_WHITELIST.length === 0) {
+    	// whitelist is empty (or not defined)
+    	return true;
+	}
+
+	return  config.IMAGE_URL_WHITELIST.some(allowedDomain =>
+				hostname === allowedDomain || hostname.endsWith('.' + allowedDomain)
+			);
+
+};
+
+config.IMAGE_URL_BACKUP_IMAGE = "https://jonas-barney.com/wp-content/uploads/2025/09/2-1.png";
+
+config.SHORTCUT_WHITELIST = {
+    // Ctrl/Cmd combos
+    ctrl: { 67: true, 90: true },      // C, Z
+    // Plain keys (no Ctrl/Cmd)
+    plain: { 83: true, 71: true, 85: true } // S, G, U
+  };
+
 //requires styles in reset.css
 config.themes = [
 	'jonas-barney',
@@ -81,7 +115,7 @@ config.FONTS = [
 //no-translate END
 
 config.TOOLS = [
-	{
+	/*{
 		name: 'select',
 		title: 'Select object tool',
 		attributes: {
@@ -92,7 +126,7 @@ config.TOOLS = [
 		name: 'selection',
 		attributes: {},
 		on_leave: 'on_leave',
-	},
+	},*/
 	{
 		name: 'brush',
 		attributes: {
@@ -122,7 +156,7 @@ config.TOOLS = [
 			strict: true,
 		},
 	},
-	{
+	/*{
 		name: 'magic_erase',
 		title: 'Magic Eraser Tool',
 		attributes: {
@@ -130,7 +164,7 @@ config.TOOLS = [
 			anti_aliasing: true,
 			contiguous: false,
 		},
-	},
+	},*/
 	{
 		name: 'fill',
 		attributes: {
@@ -139,7 +173,7 @@ config.TOOLS = [
 			contiguous: false,
 		},
 	},
-	{
+/* 	{
 		name: 'shape',
 		on_activate: 'on_activate',
 		title: 'Shapes (H)',
@@ -377,7 +411,7 @@ config.TOOLS = [
 			border_color: '#555555',
 			fill_color: '#aaaaaa',
 		},
-	},
+	}, */
 	{
 		name: 'text',
 		on_update: 'on_params_update',
@@ -427,7 +461,7 @@ config.TOOLS = [
 			}
 		},
 	},
-	{
+/* 	{
 		name: 'gradient',
 		attributes: {
 			color_1: '#008000',
@@ -505,7 +539,7 @@ config.TOOLS = [
 			border_color: '#555555',
 			fill_color: '#aaaaaa',
 		},
-	},
+	}, */
 ];
 
 //link to active tool

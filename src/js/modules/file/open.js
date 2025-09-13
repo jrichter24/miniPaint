@@ -32,6 +32,7 @@ class File_open_class {
 		this.Base_gui = new Base_gui_class();
 		this.Helper = new Helper_class();
 		this.GUI_tools = new GUI_tools_class();
+		this._opensLocked = false; // block future opens unless explicitly allowed
 
 		//clipboard class
 		this.Clipboard_class = new Clipboard_class(function (data, w, h) {
@@ -60,6 +61,14 @@ class File_open_class {
 				return;
 
 			if (code == "o") {
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
 				//open
 				this.open_file();
 				event.preventDefault();
@@ -78,7 +87,15 @@ class File_open_class {
 		);
 	}
 
+
 	open_file() {
+
+		if (this._opensLocked) {
+
+			alertify.success('Not allowed');
+			return;
+		}
+
 		var _this = this;
 
 		alertify.success('You can also drag and drop items into browser.');
@@ -259,6 +276,13 @@ class File_open_class {
 	}
 
 	async open_handler(e) {
+
+		if (this._opensLocked) {
+
+			alertify.success('Not allowed');
+			return;
+		}
+
 		var _this = this;
 		var files = e.target.files;
 
@@ -419,7 +443,7 @@ class File_open_class {
 	/**
 	 * check if url has url params, for example: https://viliusle.github.io/miniPaint/?image=http://i.imgur.com/ATda8Ae.jpg
 	 */
-	maybe_file_open_url_handler() {
+	maybe_file_open_url_handler_org() {
 		var _this = this;
 		var url_params = this.Helper.get_url_parameters();
 
@@ -428,13 +452,60 @@ class File_open_class {
 		}
 	}
 
+	maybe_file_open_url_handler_work() {
+
+		const url_params = this.Helper.get_url_parameters();
+
+		if (url_params.image != undefined) {
+			// allow quoted values and decode
+			let imgUrl = url_params.image;
+			imgUrl = imgUrl.trim().replace(/^"+|"+$/g, '');
+			try { imgUrl = decodeURIComponent(imgUrl); } catch (_) {}
+
+			// open the resource; be silent on errors when coming from URL
+			this.open_resource(imgUrl, { resize: true, lock: true, silent: true });
+		}
+	}
+
+	maybe_file_open_url_handler() {
+		const url_params = this.Helper.get_url_parameters();
+		if (url_params.image != undefined) {
+			let imgUrl = url_params.image;
+			imgUrl = imgUrl.trim().replace(/^"+|"+$/g, '');
+			try { imgUrl = decodeURIComponent(imgUrl); } catch (_) {}
+
+			// allow auto-load; skip history; mark as from query
+			this.open_resource(imgUrl, {
+			resize: true,
+			silent: true,
+			skipHistory: true,
+			fromQuery: true
+			});
+
+			// lock any further opening/replacing
+			if(config.lock_image_loading_after_startup){
+				this._opensLocked = true;
+			}
+			
+		} else {
+			// no query image: still lock further opens
+			if(config.lock_image_loading_after_startup){
+				this._opensLocked = true;
+			}
+		}
+
+	}
+
+
 	/**
 	 * includes provided resource (image or json)
 	 *
 	 * @param string resource_url
 	 */
-	open_resource(resource_url) {
+	open_resource(resource_url, opts = {}) {
 		var _this = this;
+
+		if (this._opensLocked && !opts.fromQuery) return;
 
 		if(resource_url.toLowerCase().indexOf('.json') == resource_url.length - 5){
 			//load json
@@ -451,12 +522,12 @@ class File_open_class {
 			var data = {
 				url: resource_url,
 			};
-			this.file_open_url_handler(data);
+			this.file_open_url_handler(data,opts);
 		}
 	}
 
 	//handler for open url. Example url: http://i.imgur.com/ATda8Ae.jpg
-	file_open_url_handler(user_response) {
+	file_open_url_handler_org(user_response) {
 		var _this = this;
 		var url = user_response.url;
 		if (url == '')
@@ -491,6 +562,175 @@ class File_open_class {
 		};
 		img.src = url;
 	}
+
+	_canOpen(opts) {
+		// Only allow if this call is explicitly from the query param loader
+		if (this._opensLocked && !(opts && opts.fromQuery)) return false;
+		return true;
+	}
+
+	file_open_url_handler_work(user_response, opts = {}) {
+		const url = user_response.url;
+		if (!url) return;
+
+		const layer_name = url.replace(/^.*[\\\/]/, '');
+
+		const img = new Image();
+		img.crossOrigin = "Anonymous";
+		img.onload = () => {
+			const new_layer = {
+			name: layer_name,
+			type: 'image',
+			link: img,
+			width: img.width,
+			height: img.height,
+			width_original: img.width,
+			height_original: img.height,
+			// lock + background-like behaviour
+			hide_selection_if_active: true,
+			//locked: true,
+			//lock: true,
+			//is_locked: true,
+			};
+
+			// keep need_render hook
+			img.onload = function () {
+			config.need_render = true;
+			};
+
+			const actions = [
+			new app.Actions.Insert_layer_action(new_layer)
+			];
+
+			// resize canvas to image size unless explicitly disabled
+			if (opts.resize !== false) {
+			actions.push(
+				new app.Actions.Autoresize_canvas_action(img.width, img.height, null, true, true)
+			);
+			}
+
+			app.State.do_action(
+			new app.Actions.Bundle_action('open_file_url', 'Open File URL', actions)
+			);
+
+			// select & render
+			if (new_layer.id != null) app.Layers.select(new_layer.id);
+			app.Layers.render();
+		};
+
+		img.onerror = () => {
+			// be quiet if requested (query-param path), otherwise show the original alert
+			if (!opts.silent) {
+			alertify.error('Sorry, image could not be loaded. Try copy image and paste it.');
+			}
+		};
+
+		img.src = url;
+		}
+
+
+		file_open_url_handler(user_response, opts = {}) {
+
+			if (this._opensLocked && !opts.fromQuery) return;
+			
+			var url = user_response.url;
+			if (!url) return;
+
+
+			 // -- DOMAIN WHITELIST CHECK ---
+			try {
+				const hostname = new URL(url).hostname.toLowerCase();
+
+
+				//const allowed = config.IMAGE_URL_WHITELIST.some(allowedDomain =>
+				//hostname === allowedDomain || hostname.endsWith('.' + allowedDomain)
+				//);
+				const allowed = config.isImageHostAllowed(hostname);
+
+
+				if (!allowed) {
+				if (!opts.silent) {
+					alertify.error('Not allowed. Getting default image.');
+					
+				}
+				url = config.IMAGE_URL_BACKUP_IMAGE;
+					//return; // stop loading
+				}
+			} catch (e) {
+				if (!opts.silent) {
+					alertify.error('Invalid image URL. Getting default image.');
+				//url = config.IMAGE_URL_BACKUP_IMAGE;
+				}
+				return;
+			}
+			// -- END WHITELIST CHECK ---
+
+			//alertify.error('Laoding '+url);
+
+			const layer_name = url.replace(/^.*[\\\/]/, '');
+
+			const img = new Image();
+			img.crossOrigin = "Anonymous";
+			img.onload = async () => {
+				const new_layer = {
+				name: layer_name,
+				type: 'image',
+				link: img,
+				width: img.width,
+				height: img.height,
+				width_original: img.width,
+				height_original: img.height,
+				// background-like behaviour
+				hide_selection_if_active: true,
+				// (leave lock keys out for now as you noted)
+				};
+
+				// keep need_render hook
+				img.onload = function () {
+				config.need_render = true;
+				};
+
+				// Build actions
+				const insert = new app.Actions.Insert_layer_action(new_layer);
+				const autoresize = new app.Actions.Autoresize_canvas_action(
+				img.width, img.height, null, true, true
+				);
+
+				if (opts.skipHistory) {
+				// === NO UNDO ENTRY ===
+				try {
+					if (opts.resize !== false) await autoresize.do();
+				} catch (_) {
+					// ignore resize failure
+				}
+				await insert.do();
+
+				if (new_layer.id != null) app.Layers.select(new_layer.id);
+				app.Layers.render();
+				} else {
+				// === NORMAL (undoable) OPEN ===
+				const actions = [insert];
+				if (opts.resize !== false) actions.push(autoresize);
+
+				app.State.do_action(
+					new app.Actions.Bundle_action('open_file_url', 'Open File URL', actions)
+				);
+
+				if (new_layer.id != null) app.Layers.select(new_layer.id);
+				app.Layers.render();
+				}
+			};
+
+			img.onerror = () => {
+				if (!opts.silent) {
+				alertify.error('Sorry, image could not be loaded. Try copy image and paste it.');
+				}
+			};
+
+			img.src = url;
+			}
+
+
 
 	async load_json(data) {
 		var json;

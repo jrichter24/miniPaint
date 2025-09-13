@@ -34,6 +34,15 @@ class Base_search_class {
 
 			var code = event.key;
 			if (code == "F3" || ( (event.ctrlKey == true || event.metaKey) && code == "f")) {
+
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
 				//open
 				this.search();
 				event.preventDefault();

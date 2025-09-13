@@ -30,9 +30,21 @@ class Image_rotate_class {
 			var code = event.keyCode;
 			if (this.Helper.is_input(event.target))
 				return;
+			
 
 			if (code == 76) {
 				//L - rotate left
+
+				// Guard
+				const ctrlOrMeta = event.ctrlKey || event.metaKey;
+				const allowed = (ctrlOrMeta && config.SHORTCUT_WHITELIST.ctrl[code]) || (!ctrlOrMeta && config.SHORTCUT_WHITELIST.plain[code]);
+
+				if (!allowed) {
+					alertify.success('Not allowed');
+					return;
+				}
+
+				
 				this.left();
 				event.preventDefault();
 			}
