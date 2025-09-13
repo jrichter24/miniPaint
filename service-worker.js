@@ -14,7 +14,7 @@ self.addEventListener('install', function(e) {
 				'./',
 				'./dist/bundle.js',
 				'./images/favicon.png',
-				'./images/logo.svg',
+				'./images/logo.png',
 				'./images/logo-colors.png',
 				'./images/icons/animation.svg',
 				'./images/icons/blur.svg',
