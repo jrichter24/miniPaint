@@ -39,6 +39,48 @@
 	--scrollbar-thumb-color: #2f3739;
 	--mobile-menu-toggle-filter: invert(1);
 }
+body.theme-jonas-barney{
+	/* light */
+	--background: #f2f9ff;
+	--text-color: #0c0c0d;
+	--text-color-muted: #444444;
+	--text-color-red: #fd4a4a;
+	--text-color-green: #2b882b;
+	--text-color-blue: #5454ca;
+	--link-color: #000080;
+	--section-background-color: #fcb620;
+	--area-background-color: #fcb620;
+	--block-background-color: #fcb620;
+	--header-background-color: #db8a20;
+	--button-background-color: #f9f9fa;
+	--button-background-color-hover: #db8a20;
+	--button-background-color-active: #f3f3f3;
+	--button-text-color-active: #db8a20;
+	--button-shadow-color: rgba(0, 0, 0, 0.1);
+	--button-toggle-background-color: #db8a20;
+	--button-toggle-background-color-hover: #db8a20;
+	--input-background-color: #ffffff;
+	--input-background-color-hover: #ddd;
+	--input-text-color: #0c0c0d;
+	--input-border-color: #db8a20;
+	--input-border-color-active: #db8a20;
+	--input-group-border-color: #db8a20;
+	--menu-background-color: #fcb620;
+	--menu-icons-filter: none;
+	--menu-icons-filter-active: invert(1);
+	--menu-text-color: #333333;
+	--menu-dropdown-hover-background-color: #db8a20;
+	--menu-dropdown-border-color: #15439b;
+	--background-color-active: #db8a20;
+	--background-color-hover: #db8a20;
+	--text-color-active: #15439b;
+	--border-color: #db8a20;
+	--scrollbar-track-color: #f9f9fa;
+	--scrollbar-thumb-color: #db8a20;
+	--mobile-menu-toggle-filter: none;
+}
+
+
 body.theme-light{
 	/* light */
 	--background: #f9f9fa;
