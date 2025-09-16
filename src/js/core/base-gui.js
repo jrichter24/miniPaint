@@ -11,7 +11,10 @@ import GUI_colors_class from './gui/gui-colors.js';
 import GUI_layers_class from './gui/gui-layers.js';
 import GUI_information_class from './gui/gui-information.js';
 import GUI_details_class from './gui/gui-details.js';
-import GUI_menu_class from './gui/gui-menu.js';
+
+import GUI_menu_class from './gui/reduced-gui-menu.js'; // Shows the reduced menu
+//import GUI_menu_class from './gui/gui-menu.js'; // Shows the full menu
+
 import Tools_translate_class from './../modules/tools/translate.js';
 import Tools_settings_class from './../modules/tools/settings.js';
 import Helper_class from './../libs/helpers.js';
@@ -132,6 +135,41 @@ class Base_gui_class {
 			config.guides_enabled = Boolean(guides_cookie);
 		}
 	}
+
+	key_down_handler(e) {
+		// ---- SHORTCUT WHITELIST ----
+		// Normalize
+		const code = e.keyCode || e.which;           // 83=S, 71=G, 85=U, 67=C, 90=Z
+		const ctrlOrMeta = e.ctrlKey || e.metaKey;
+
+		// Allow typing in inputs/textareas/contenteditable
+		const t = e.target;
+		const tag = (t && t.tagName) ? t.tagName.toUpperCase() : '';
+		const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable);
+		if (isInput) {
+			return; // don't block text fields
+		}
+
+		// Whitelist check (use config if present, else fallback)
+		const WL = (config && config.SHORTCUT_WHITELIST) ? config.SHORTCUT_WHITELIST : {
+			ctrl: { 67: true, 90: true },      // Ctrl/Cmd + C, Z
+			plain: { 83: true, 71: true, 85: true } // S, G, U
+		};
+
+		const allowed =
+			(ctrlOrMeta && WL.ctrl[code]) ||
+			(!ctrlOrMeta && WL.plain[code]);
+
+		if (!allowed) {
+			// Block everything not explicitly allowed
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			return;
+		}
+		// ---- END WHITELIST ----
+
+		// ...existing logic of key_down_handler continues here...
+		}
 
 	render_main_gui() {
 		this.autodetect_dimensions();
