@@ -488,6 +488,24 @@ class File_open_class {
 			}
 			
 		} else {
+
+			
+			alertify.success('Loading default image');
+
+			let imgUrl = config.IMAGE_URL_BACKUP_IMAGE;
+			imgUrl = imgUrl.trim().replace(/^"+|"+$/g, '');
+			try { imgUrl = decodeURIComponent(imgUrl); } catch (_) {}
+
+			// allow auto-load; skip history; mark as from query
+			this.open_resource(imgUrl, {
+			resize: true,
+			silent: true,
+			skipHistory: true,
+			fromQuery: true
+			});
+
+		
+
 			// no query image: still lock further opens
 			if(config.lock_image_loading_after_startup){
 				this._opensLocked = true;
