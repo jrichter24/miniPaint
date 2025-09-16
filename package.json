@@ -14,7 +14,8 @@
     "server": "webpack serve --mode development --env development --open",
     "dev": "webpack --mode development",
     "build": "webpack --mode production",
-    "build:kids": "cross-env MINIPAINT_MODE=kids webpack --mode production"
+    "build:kids": "cross-env MINIPAINT_MODE=kids webpack --mode production",
+    "start": "webpack serve --mode development"
   },
   "repository": {
     "type": "git",
