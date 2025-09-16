@@ -13,23 +13,9 @@ import './../css/print.css';
 import './../../node_modules/alertifyjs/build/css/alertify.min.css';
 //js
 import app from './app.js';
-import config from './config.js'; // TODO MAKE SWITCHABLE!
-
-//const useReduced = process.env.MINIPAINT_MODE === 'kids';
-//import config from useReduced ? './js/config_reduced.js' : './js/config.js';
-
-//const useReduced = process.env.MINIPAINT_MODE === 'kids';
-//let config;
-//if (useReduced) {
-//  // note the .default to get the ES module default export
-//  config = require('./config_reduced.js').default;
-//} else {
-//  config = require('./config.js').default;
-//}
-
-
+import config from './config.js';
 import './core/components/index.js';
-import Base_gui_class from './core/reduced_base-gui.js';
+import Base_gui_class from './core/base-gui.js';
 import Base_layers_class from './core/base-layers.js';
 import Base_tools_class from './core/base-tools.js';
 import Base_state_class from './core/base-state.js';
