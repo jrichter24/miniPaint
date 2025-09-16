@@ -50,7 +50,7 @@ const menuDefinition = [
 			},
 			{
 				divider: true
-			},
+			},*/
 			{
 				name: 'Export',
 				ellipsis: true,
